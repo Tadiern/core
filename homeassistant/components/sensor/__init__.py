@@ -5,19 +5,17 @@ import asyncio
 from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation as DecimalInvalidOperation
 import logging
-from math import ceil, floor, log10
-import re
-import sys
-from typing import Any, Final, cast, final
+from math import ceil, floor, isfinite, log10
+from typing import Any, Final, Self, cast, final
 
-from typing_extensions import Self
+from typing_extensions import override
 
 from homeassistant.config_entries import ConfigEntry
 
-# pylint: disable=[hass-deprecated-import]
+# pylint: disable-next=hass-deprecated-import
 from homeassistant.const import (  # noqa: F401
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_UNIT_OF_MEASUREMENT,
@@ -49,9 +47,11 @@ from homeassistant.const import (  # noqa: F401
     DEVICE_CLASS_TIMESTAMP,
     DEVICE_CLASS_VOLATILE_ORGANIC_COMPOUNDS,
     DEVICE_CLASS_VOLTAGE,
+    EntityCategory,
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, State, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.config_validation import (
     PLATFORM_SCHEMA,
@@ -90,10 +90,6 @@ from .websocket_api import async_setup as async_setup_ws_api
 _LOGGER: Final = logging.getLogger(__name__)
 
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"
-
-NEGATIVE_ZERO_PATTERN = re.compile(r"^-(0\.?0*)$")
-
-PY_311 = sys.version_info >= (3, 11, 0)
 
 SCAN_INTERVAL: Final = timedelta(seconds=30)
 
@@ -156,6 +152,8 @@ class SensorEntityDescription(EntityDescription):
 
 class SensorEntity(Entity):
     """Base class for sensor entities."""
+
+    _entity_component_unrecorded_attributes = frozenset({ATTR_OPTIONS})
 
     entity_description: SensorEntityDescription
     _attr_device_class: SensorDeviceClass | None
@@ -255,6 +253,11 @@ class SensorEntity(Entity):
     async def async_internal_added_to_hass(self) -> None:
         """Call when the sensor entity is added to hass."""
         await super().async_internal_added_to_hass()
+        if self.entity_category == EntityCategory.CONFIG:
+            raise HomeAssistantError(
+                f"Entity {self.entity_id} cannot be added as the entity category is set to config"
+            )
+
         if not self.registry_entry:
             return
         self._async_read_entity_options()
@@ -268,6 +271,7 @@ class SensorEntity(Entity):
         return self.device_class not in (None, SensorDeviceClass.ENUM)
 
     @property
+    @override
     def device_class(self) -> SensorDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
@@ -323,6 +327,7 @@ class SensorEntity(Entity):
         return None
 
     @property
+    @override
     def capability_attributes(self) -> Mapping[str, Any] | None:
         """Return the capability attributes."""
         if state_class := self.state_class:
@@ -353,7 +358,7 @@ class SensorEntity(Entity):
         """Return initial entity options.
 
         These will be stored in the entity registry the first time the entity is seen,
-        and then never updated.
+        and then only updated if the unit system is changed.
         """
         suggested_unit_of_measurement = self._get_initial_suggested_unit()
 
@@ -368,6 +373,7 @@ class SensorEntity(Entity):
 
     @final
     @property
+    @override
     def state_attributes(self) -> dict[str, Any] | None:
         """Return state attributes."""
         if last_reset := self.last_reset:
@@ -445,6 +451,7 @@ class SensorEntity(Entity):
 
     @final
     @property
+    @override
     def unit_of_measurement(self) -> str | None:
         """Return the unit of measurement of the entity, after unit conversion."""
         # Highest priority, for registered entities: unit set by user,with fallback to
@@ -453,7 +460,7 @@ class SensorEntity(Entity):
             return self._sensor_option_unit_of_measurement
 
         # Second priority, for non registered entities: unit suggested by integration
-        if not self.unique_id and (
+        if not self.registry_entry and (
             suggested_unit_of_measurement := self.suggested_unit_of_measurement
         ):
             return suggested_unit_of_measurement
@@ -474,6 +481,7 @@ class SensorEntity(Entity):
 
     @final
     @property
+    @override
     def state(self) -> Any:
         """Return the state of the sensor and perform unit conversions, if needed."""
         native_unit_of_measurement = self.native_unit_of_measurement
@@ -536,8 +544,8 @@ class SensorEntity(Entity):
                         "which is missing timezone information"
                     )
 
-                if value.tzinfo != timezone.utc:
-                    value = value.astimezone(timezone.utc)
+                if value.tzinfo != UTC:
+                    value = value.astimezone(UTC)
 
                 return value.isoformat(timespec="seconds")
             except (AttributeError, OverflowError, TypeError) as err:
@@ -590,7 +598,11 @@ class SensorEntity(Entity):
         if not isinstance(value, (int, float, Decimal)):
             try:
                 if isinstance(value, str) and "." not in value and "e" not in value:
-                    numerical_value = int(value)
+                    try:
+                        numerical_value = int(value)
+                    except ValueError:
+                        # Handle nan, inf
+                        numerical_value = float(value)
                 else:
                     numerical_value = float(value)  # type:ignore[arg-type]
             except (TypeError, ValueError) as err:
@@ -604,14 +616,20 @@ class SensorEntity(Entity):
         else:
             numerical_value = value
 
-        if (
-            native_unit_of_measurement != unit_of_measurement
-            and device_class in UNIT_CONVERTERS
+        if not isfinite(numerical_value):
+            raise ValueError(
+                f"Sensor {self.entity_id} has device class '{device_class}', "
+                f"state class '{state_class}' unit '{unit_of_measurement}' and "
+                f"suggested precision '{suggested_precision}' thus indicating it "
+                f"has a numeric value; however, it has the non-finite value: "
+                f"'{numerical_value}'"
+            )
+
+        if native_unit_of_measurement != unit_of_measurement and (
+            converter := UNIT_CONVERTERS.get(device_class)
         ):
             # Unit conversion needed
-            converter = UNIT_CONVERTERS[device_class]
-
-            converted_numerical_value = UNIT_CONVERTERS[device_class].convert(
+            converted_numerical_value = converter.convert(
                 float(numerical_value),
                 native_unit_of_measurement,
                 unit_of_measurement,
@@ -641,12 +659,7 @@ class SensorEntity(Entity):
                 )
                 precision = precision + floor(ratio_log)
 
-                if PY_311:
-                    value = f"{converted_numerical_value:z.{precision}f}"
-                else:
-                    value = f"{converted_numerical_value:.{precision}f}"
-                    if value.startswith("-0") and NEGATIVE_ZERO_PATTERN.match(value):
-                        value = value[1:]
+                value = f"{converted_numerical_value:z.{precision}f}"
             else:
                 value = converted_numerical_value
 
@@ -786,7 +799,7 @@ class SensorEntity(Entity):
             registry = er.async_get(self.hass)
             initial_options = self.get_initial_entity_options() or {}
             registry.async_update_entity_options(
-                self.entity_id,
+                self.registry_entry.entity_id,
                 f"{DOMAIN}.private",
                 initial_options.get(f"{DOMAIN}.private"),
             )
@@ -908,11 +921,6 @@ def async_rounded_state(hass: HomeAssistant, entity_id: str, state: State) -> st
 
     with suppress(TypeError, ValueError):
         numerical_value = float(value)
-        if PY_311:
-            value = f"{numerical_value:z.{precision}f}"
-        else:
-            value = f"{numerical_value:.{precision}f}"
-            if value.startswith("-0") and NEGATIVE_ZERO_PATTERN.match(value):
-                value = value[1:]
+        value = f"{numerical_value:z.{precision}f}"
 
     return value

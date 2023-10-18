@@ -74,50 +74,50 @@
         }
       },
       "on_supervisor": {
-        "title": "Select connection method",
-        "description": "Do you want to use the Z-Wave JS Supervisor add-on?",
+        "title": "[%key:component::zwave_js::config::step::on_supervisor::title%]",
+        "description": "[%key:component::zwave_js::config::step::on_supervisor::description%]",
         "data": {
-          "use_addon": "Use the Z-Wave JS Supervisor add-on"
+          "use_addon": "[%key:component::zwave_js::config::step::on_supervisor::data::use_addon%]"
         }
       },
       "install_addon": {
-        "title": "The Z-Wave JS add-on installation has started"
+        "title": "[%key:component::zwave_js::config::step::install_addon::title%]"
       },
       "configure_addon": {
-        "title": "Enter the Z-Wave JS add-on configuration",
-        "description": "The add-on will generate security keys if those fields are left empty.",
+        "title": "[%key:component::zwave_js::config::step::configure_addon::title%]",
+        "description": "[%key:component::zwave_js::config::step::configure_addon::description%]",
         "data": {
           "usb_path": "[%key:common::config_flow::data::usb_path%]",
-          "s0_legacy_key": "S0 Key (Legacy)",
-          "s2_authenticated_key": "S2 Authenticated Key",
-          "s2_unauthenticated_key": "S2 Unauthenticated Key",
-          "s2_access_control_key": "S2 Access Control Key",
+          "s0_legacy_key": "[%key:component::zwave_js::config::step::configure_addon::data::s0_legacy_key%]",
+          "s2_authenticated_key": "[%key:component::zwave_js::config::step::configure_addon::data::s2_authenticated_key%]",
+          "s2_unauthenticated_key": "[%key:component::zwave_js::config::step::configure_addon::data::s2_unauthenticated_key%]",
+          "s2_access_control_key": "[%key:component::zwave_js::config::step::configure_addon::data::s2_access_control_key%]",
           "log_level": "Log level",
           "emulate_hardware": "Emulate Hardware"
         }
       },
       "start_addon": {
-        "title": "The Z-Wave JS add-on is starting."
+        "title": "[%key:component::zwave_js::config::step::start_addon::title%]"
       }
     },
     "error": {
-      "invalid_ws_url": "Invalid websocket URL",
+      "invalid_ws_url": "[%key:component::zwave_js::config::error::invalid_ws_url%]",
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
-      "addon_info_failed": "Failed to get Z-Wave JS add-on info.",
-      "addon_install_failed": "Failed to install the Z-Wave JS add-on.",
-      "addon_set_config_failed": "Failed to set Z-Wave JS configuration.",
-      "addon_start_failed": "Failed to start the Z-Wave JS add-on.",
-      "addon_get_discovery_info_failed": "Failed to get Z-Wave JS add-on discovery info.",
+      "addon_info_failed": "[%key:component::zwave_js::config::abort::addon_info_failed%]",
+      "addon_install_failed": "[%key:component::zwave_js::config::abort::addon_install_failed%]",
+      "addon_set_config_failed": "[%key:component::zwave_js::config::abort::addon_set_config_failed%]",
+      "addon_start_failed": "[%key:component::zwave_js::config::abort::addon_start_failed%]",
+      "addon_get_discovery_info_failed": "[%key:component::zwave_js::config::abort::addon_get_discovery_info_failed%]",
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "different_device": "The connected USB device is not the same as previously configured for this config entry. Please instead create a new config entry for the new device."
     },
     "progress": {
-      "install_addon": "Please wait while the Z-Wave JS add-on installation finishes. This can take several minutes.",
-      "start_addon": "Please wait while the Z-Wave JS add-on start completes. This may take some seconds."
+      "install_addon": "[%key:component::zwave_js::config::progress::install_addon%]",
+      "start_addon": "[%key:component::zwave_js::config::progress::start_addon%]"
     }
   },
   "device_automation": {
@@ -150,6 +150,31 @@
     "invalid_server_version": {
       "title": "Newer version of Z-Wave JS Server needed",
       "description": "The version of Z-Wave JS Server you are currently running is too old for this version of Home Assistant. Please update the Z-Wave JS Server to the latest version to fix this issue."
+    },
+    "dry_fan_presets_deprecation": {
+      "title": "Dry and Fan preset modes will be removed: {entity_id}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Dry and Fan preset modes will be removed: {entity_id}",
+            "description": "You are using the Dry or Fan preset modes in your entity `{entity_id}`.\n\nDry and Fan preset modes are deprecated and will be removed. Please update your automations to use the corresponding Dry and Fan **HVAC modes** instead.\n\nClick on SUBMIT below once you have manually fixed this issue."
+          }
+        }
+      }
+    },
+    "device_config_file_changed": {
+      "title": "Z-Wave device configuration file changed: {device_name}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Z-Wave device configuration file changed: {device_name}",
+            "description": "Z-Wave JS discovers a lot of device metadata by interviewing the device. However, some of the information has to be loaded from a configuration file. Some of this information is only evaluated once, during the device interview.\n\nWhen a device config file is updated, this information may be stale and and the device must be re-interviewed to pick up the changes.\n\n This is not a required operation and device functionality will be impacted during the re-interview process, but you may see improvements for your device once it is complete.\n\nIf you'd like to proceed, click on SUBMIT below. The re-interview will take place in the background."
+          }
+        },
+        "abort": {
+          "cannot_connect": "Cannot connect to {device_name}. Please try again later after confirming that your Z-Wave network is up and connected to Home Assistant."
+        }
+      }
     }
   },
   "services": {
