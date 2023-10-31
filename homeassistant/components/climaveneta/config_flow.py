@@ -1,4 +1,4 @@
-"""Support for the Mitsubishi-Climaveneta iMXW fancoil series."""
+"""Support for the Mitsubishi-Climaveneta iMXW and iLife2 fancoil series."""
 
 from typing import Any
 
@@ -9,11 +9,19 @@ from homeassistant.components.modbus import get_hub
 from homeassistant.const import CONF_NAME, CONF_SLAVE, DEVICE_DEFAULT_NAME
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import CONF_HUB, DEFAULT_MODBUS_HUB, DEFAULT_SERIAL_SLAVE_ID, DOMAIN
+from .const import (
+    CLIMAVENETA_ILIFE2,
+    CLIMAVENETA_IMXW,
+    CONF_HUB,
+    DEFAULT_MODBUS_HUB,
+    DEFAULT_SERIAL_SLAVE_ID,
+    DEVICE_TYPE,
+    DOMAIN,
+)
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Climaveneta_imxw."""
+    """Handle a config flow for Climaveneta."""
 
     VERSION = 1
 
@@ -29,11 +37,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["hub"] = "invalid_modbus_hub"
 
             if not errors:
-                title_device = f"Climaveneta_IMXW {user_input[CONF_NAME]} at {user_input[CONF_HUB]}:{user_input[CONF_SLAVE]}"
+                title_device = f"Climaveneta {user_input[DEVICE_TYPE]} {user_input[CONF_NAME]} at {user_input[CONF_HUB]}:{user_input[CONF_SLAVE]}"
                 return self.async_create_entry(title=title_device, data=user_input)
 
         schema = vol.Schema(
             {
+                vol.Required(DEVICE_TYPE, default=CLIMAVENETA_IMXW): vol.In(
+                    (
+                        CLIMAVENETA_IMXW,
+                        CLIMAVENETA_ILIFE2,
+                    )
+                ),
                 vol.Required(CONF_HUB, default=str(DEFAULT_MODBUS_HUB)): str,
                 vol.Required(CONF_SLAVE, default=int(DEFAULT_SERIAL_SLAVE_ID)): vol.All(
                     int, vol.Range(min=0, max=255)

@@ -1,0 +1,9 @@
+{
+  "domain": "climaveneta",
+  "name": "climaveneta",
+  "codeowners": ["@Tadiern"],
+  "config_flow": true,
+  "dependencies": ["modbus"],
+  "documentation": "https://www.home-assistant.io/integrations/climaveneta",
+  "iot_class": "local_polling"
+}

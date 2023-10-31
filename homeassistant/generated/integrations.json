@@ -849,8 +849,8 @@
         }
       }
     },
-    "climaveneta_imxw": {
-      "name": "climaveneta_imxw",
+    "climaveneta": {
+      "name": "climaveneta",
       "integration_type": "hub",
       "config_flow": true,
       "iot_class": "local_polling"

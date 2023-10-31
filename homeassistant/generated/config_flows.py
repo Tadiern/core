@@ -80,7 +80,7 @@ FLOWS = {
         "canary",
         "cast",
         "cert_expiry",
-        "climaveneta_imxw",
+        "climaveneta",
         "cloudflare",
         "co2signal",
         "coinbase",

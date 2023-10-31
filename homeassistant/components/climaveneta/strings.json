@@ -2,9 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configure Climaveneta iMXW",
-        "description": "Insert the Home Assistant modbus hub and the address ID of the iMXW",
+        "title": "Configure Climaveneta iMXW and iLife2",
+        "description": "Insert the Home Assistant modbus hub and the address ID",
         "data": {
+          "model": "Select fancoil model",
           "hub": "Modbus hub name",
           "slave": "Address ID",
           "name": "[%key:common::config_flow::data::name%]"

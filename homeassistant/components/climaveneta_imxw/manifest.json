@@ -1,9 +1,0 @@
-{
-  "domain": "climaveneta_imxw",
-  "name": "climaveneta_imxw",
-  "codeowners": ["@Tadiern"],
-  "config_flow": true,
-  "dependencies": ["modbus"],
-  "documentation": "https://www.home-assistant.io/integrations/climaveneta_imxw",
-  "iot_class": "local_polling"
-}
